@@ -1,0 +1,32 @@
+{
+  "name": "fluid-shape",
+  "version": "1.0.0",
+  "description": "Interactive iridescent sculpture that morphs between a ribbon and an organic sphere",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "playwright test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kochman-k/fluid-shape.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Kochman-k/fluid-shape/issues"
+  },
+  "homepage": "https://github.com/Kochman-k/fluid-shape#readme",
+  "private": true,
+  "dependencies": {
+    "@fontsource/dm-sans": "^5.3.0",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "vite": "^8.3.4"
+  }
+}
