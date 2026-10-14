@@ -1,7 +1,7 @@
 {
   "name": "fluid-shape",
   "version": "1.0.0",
-  "description": "Interactive particle cloud that follows cursor strokes and gathers into an organic sphere",
+  "description": "Interactive polygon ribbon that follows cursor strokes and morphs into a sphere, with a rotatable 3D owl experiment",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",

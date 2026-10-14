@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('renders the particle cloud and gathers the moving trail back into a sphere', async ({ page }) => {
+test('renders the polygon ribbon and gathers the moving trail back into a sphere', async ({ page }) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => {
@@ -9,7 +9,6 @@ test('renders the particle cloud and gathers the moving trail back into a sphere
   await page.goto('/');
   const canvas = page.locator('canvas');
   await expect(canvas).toHaveAttribute('data-ready', 'true');
-  expect(Number(await canvas.getAttribute('data-particles'))).toBeGreaterThan(10000);
   await expect.poll(async () => Number(await canvas.getAttribute('data-morph'))).toBeLessThan(.1);
   await page.screenshot({ path: '/tmp/fluid-idle.png' });
   await page.evaluate(() => {
@@ -35,17 +34,17 @@ test('material, sliders, pause, reset, information and export work', async ({ pa
   await page.goto('/');
   await expect(page.locator('canvas')).toHaveAttribute('data-ready', 'true');
   await page.getByRole('button', { name: 'Amber', exact: true }).click();
-  await expect(page.locator('#material-label')).toHaveText('AMBER DUST');
-  await page.locator('#dispersion').fill('30');
-  await expect(page.locator('#dispersion-value')).toHaveText('30%');
+  await expect(page.locator('#material-label')).toHaveText('AMBER RESIN');
+  await page.locator('#transparency').fill('30');
+  await expect(page.locator('#transparency-value')).toHaveText('30%');
   await page.getByRole('button', { name: 'Wstrzymaj animację', exact: true }).click();
   const before = await page.locator('canvas').getAttribute('data-morph');
   await page.mouse.move(500, 500);
   await page.waitForTimeout(200);
   await expect(page.locator('canvas')).toHaveAttribute('data-morph', before);
   await page.getByRole('button', { name: 'Przywróć ustawienia', exact: true }).click();
-  await expect(page.locator('#dispersion-value')).toHaveText('58%');
-  await expect(page.locator('#material-label')).toHaveText('ROSE DUST');
+  await expect(page.locator('#transparency-value')).toHaveText('38%');
+  await expect(page.locator('#material-label')).toHaveText('EMBER RESIN');
   await page.getByRole('button', { name: 'O projekcie' }).click();
   await expect(page.locator('dialog')).toBeVisible();
   await page.keyboard.press('Escape');
@@ -53,7 +52,7 @@ test('material, sliders, pause, reset, information and export work', async ({ pa
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Zapisz obraz rzeźby' }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe('fluid-rose.png');
+  expect(download.suggestedFilename()).toBe('fluid-ember.png');
 });
 
 test('mobile layout fits the screen and supports touch input', async ({ page }) => {
@@ -61,13 +60,13 @@ test('mobile layout fits the screen and supports touch input', async ({ page }) 
   await page.goto('/');
   await expect(page.locator('canvas')).toHaveAttribute('data-ready', 'true');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await expect(page.locator('#particles-panel .controls')).toBeVisible();
+  await expect(page.locator('#ribbon-panel .controls')).toBeVisible();
   await page.locator('#canvas-container').dispatchEvent('pointermove', { clientX: 150, clientY: 330, pointerType: 'touch' });
   await expect.poll(async () => Number(await page.locator('canvas').getAttribute('data-morph'))).toBeGreaterThan(.1);
   await page.screenshot({ path: '/tmp/fluid-mobile.png' });
 });
 
-test('owl is rendered in a separate tab, rotates, exports and preserves particle settings', async ({ page }) => {
+test('owl is rendered in a separate tab, rotates, exports and preserves ribbon settings', async ({ page }) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => { if (message.type() === 'error' && /THREE|shader|WebGL/i.test(message.text())) errors.push(message.text()); });
@@ -77,7 +76,7 @@ test('owl is rendered in a separate tab, rotates, exports and preserves particle
   const canvas = page.locator('#owl-canvas canvas');
   await expect(canvas).toHaveAttribute('data-ready', 'true');
   await expect(canvas).toHaveAttribute('data-azimuth', /.+/);
-  await expect(page.locator('#particles-panel')).toBeHidden();
+  await expect(page.locator('#ribbon-panel')).toBeHidden();
   const angle = Number(await canvas.getAttribute('data-azimuth'));
   const bounds = await canvas.boundingBox();
   await page.mouse.move(bounds.x + bounds.width * .5, bounds.y + bounds.height * .5);
@@ -92,8 +91,8 @@ test('owl is rendered in a separate tab, rotates, exports and preserves particle
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Zapisz obraz sowy' }).click();
   expect((await downloadPromise).suggestedFilename()).toBe('fluid-owl.png');
-  await page.getByRole('tab', { name: 'Drobinki' }).click();
-  await expect(page.locator('#material-label')).toHaveText('AMBER DUST');
+  await page.getByRole('tab', { name: 'Wstęga' }).click();
+  await expect(page.locator('#material-label')).toHaveText('AMBER RESIN');
   await expect(page.locator('#owl-panel')).toBeHidden();
   expect(errors).toEqual([]);
 });

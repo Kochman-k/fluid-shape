@@ -1,8 +1,6 @@
 # Fluid
 
-Interaktywna chmura WebGL: 24 000 drobinek na komputerze lub 12 000 na telefonie. Ruch kursora lub palca rozciąga pył w ślad podążający za rzeczywistym torem gestu. Każda cząstka ma własną pozycję i prędkość, dzięki czemu po zatrzymaniu stopniowo wraca do zwartej, nieregularnej kuli. Ten sam układ cząstek jest używany przez cały czas — przejście nie podmienia brył ani nie teleportuje drobinek.
-
-Stylistyka Rose jest inspirowana ziarnistym, różowym pyłem z nagrania referencyjnego. Ember i Amber zachowują ciepłe warianty kolorystyczne. Oświetlenie pojedynczych ziaren, różne wielkości punktów i delikatne dryfowanie nadają chmurze głębię. Wszystkie zasoby powstają lokalnie.
+Polygonowa wstęga WebGL podążająca za torem kursora. Po zatrzymaniu stopniowo morfuje w nieregularną kulę. Zachowuje falowanie i bezwładność ogona oraz ciepłe, połyskujące wykończenie żywicy z przezroczystymi elementami.
 
 ## Polygonowa sowa — drugi eksperyment
 
@@ -37,8 +35,8 @@ Jeśli Pages nie jest dostępne dla prywatnego repozytorium w Twoim planie GitHu
 ## Sterowanie
 
 - Poruszaj kursorem po scenie lub przesuwaj palcem na ekranie dotykowym.
-- Rose, Ember i Amber zmieniają kolor drobinek.
-- Rozproszenie zmienia szerokość i luźność pyłowego śladu.
+- Ember, Amber i Chrome zmieniają wykończenie wstęgi.
+- Przezroczystość zmienia przepuszczalność światła materiału.
 - Płynność określa długość pamięci śladu i łagodność reakcji.
 - Pauza zatrzymuje animację; reset przywraca ustawienia.
 - Narzędzia poniżej sceny losują kształt, zapisują PNG sceny i włączają pełny ekran, jeśli przeglądarka go obsługuje.
@@ -52,6 +50,6 @@ npm run build
 npm test
 ```
 
-Testy jednostkowe sprawdzają zachowanie śladu i bezwładności, poprawność kształtu oraz ciągłość położenia drobinek podczas zmiany celu i losowania. Testy Playwright sprawdzają renderowanie WebGL, przejście kula–pyłowy ślad–kula, kolory, suwaki, pauzę, reset, okno informacji, pobieranie PNG i układ mobilny z dotykiem. Domyślnie używają `/usr/bin/chromium`; inną przeglądarkę można wskazać przez `CHROMIUM_PATH`. Testy używają programowego renderowania WebGL w środowisku cloud. Serwer deweloperski uruchamia się automatycznie, jeśli nie działa.
+Testy jednostkowe sprawdzają zachowanie śladu i bezwładności, poprawność kształtu oraz ciągłość położenia archiwalnego wariantu drobinek. Testy Playwright sprawdzają renderowanie WebGL, przejście kula–wstęga–kula, kolory, suwaki, pauzę, reset, okno informacji, pobieranie PNG i układ mobilny z dotykiem. Domyślnie używają `/usr/bin/chromium`; inną przeglądarkę można wskazać przez `CHROMIUM_PATH`. Testy używają programowego renderowania WebGL w środowisku cloud. Serwer deweloperski uruchamia się automatycznie, jeśli nie działa.
 
 Inspiracja: [Blobmixer / 14islands](https://blobmixer.14islands.com/).
