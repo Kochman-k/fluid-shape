@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import './style.css';
 import { StrokeTrail } from './stroke.js';
+import { StrokeSettling } from './settling.js';
 
 const $ = (id) => document.getElementById(id);
 const container = $('canvas-container');
@@ -12,12 +13,13 @@ const palettes = {
   chrome: { color: '#e0e3f0', metalness: .96, iridescence: .18, label: 'LIQUID CHROME' },
 };
 let renderer, scene, camera, sculpture, geometry, material;
-let seed = 1.7, morph = 0, elapsed = 0, lastFrame = 0, lastMove = -10000;
+let seed = 1.7, morph = 0, elapsed = 0, lastFrame = 0;
 let pointer = new THREE.Vector2(), previousPointer = new THREE.Vector2();
 const follow = new THREE.Vector2();
 const followVelocity = new THREE.Vector2();
 const followTarget = new THREE.Vector2();
 const stroke = new StrokeTrail();
+const settling = new StrokeSettling();
 const radialSegments = 80;
 const longitudinalSegments = 56;
 const ringCount = longitudinalSegments + 1;
@@ -125,12 +127,11 @@ function onPointer(event) {
   if (pointer.distanceToSquared(previousPointer) > .00000001) {
     const now = performance.now();
     stroke.add(pointer.x, pointer.y, now);
-    lastMove = now;
+    settling.move(pointer.x, pointer.y, now);
   }
 }
 container.addEventListener('pointermove', onPointer);
 container.addEventListener('pointerdown', onPointer);
-container.addEventListener('pointerleave', () => { lastMove = -10000; });
 
 function updateStroke(now, time) {
   const halfHeight = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
@@ -193,15 +194,12 @@ function animate(now) {
   if (settings.paused) return;
   const motionScale = reducedMotion.matches ? .22 : 1;
   elapsed += dt * motionScale;
-  const idleSeconds = Math.max(0, (now - lastMove) / 1000 - .2);
-  // Gradually release motion so short gaps between pointer events never snap the shape.
-  const activity = Math.exp(-idleSeconds / .5);
-  const targetMorph = activity * motionScale;
   const softness = settings.response / 100;
-  morph = THREE.MathUtils.damp(morph, targetMorph, 8 - softness * 2.5, dt);
+  settling.step(now, dt, softness, motionScale);
+  morph = settling.morph;
 
   const mobile = camera.aspect < 1;
-  updateStroke(now, elapsed);
+  updateStroke(settling.trailTime, elapsed);
   const halfHeight = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
   const halfWidth = halfHeight * camera.aspect;
   const radius = mobile ? 1.15 : 1.5;
@@ -270,7 +268,7 @@ function updatePause() {
 $('pause').addEventListener('click', () => { settings.paused = !settings.paused; updatePause(); });
 $('reset').addEventListener('click', () => {
   Object.assign(settings, defaults);
-  seed = 1.7; pointer.set(0, 0); stroke.clear(); lastMove = -10000;
+  seed = 1.7; pointer.set(0, 0); stroke.clear(); settling.reset();
   updateMaterial(); updateSliders(); updatePause(); toast('Przywrócono początkową formę');
 });
 $('shuffle').addEventListener('click', () => { seed = Math.random() * 20; toast('Nowa forma. Nowy rytm.'); });

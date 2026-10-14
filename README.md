@@ -1,6 +1,6 @@
 # Fluid
 
-Interaktywna rzeźba WebGL: ruch kursora lub palca rysuje skręconą wstęgę po rzeczywistym torze ruchu. Jej początek podąża za kursorem, a starsze fragmenty pozostają w ogonie jak ślad szklanego pędzla. Po zatrzymaniu ślad zbiera się w organiczną kulę w pobliżu końca gestu. Materiał wykorzystuje odbicia studyjne, transmisję, iryzację i powłokę clearcoat. Cała geometria, oświetlenie i tekstury powstają lokalnie.
+Interaktywna rzeźba WebGL: ruch kursora lub palca rysuje skręconą wstęgę po rzeczywistym torze ruchu. Jej początek podąża za kursorem, a starsze fragmenty pozostają w ogonie jak ślad szklanego pędzla. Po zatrzymaniu ślad wyhamowuje i zbiera się w organiczną kulę w pobliżu końca gestu. Szybkie gesty zachowują więcej bezwładności: ogon pozostaje widoczny podczas formowania sfery, zamiast najpierw znikać w cienką kreskę. Materiał wykorzystuje odbicia studyjne, transmisję, iryzację i powłokę clearcoat. Cała geometria, oświetlenie i tekstury powstają lokalnie.
 
 ## Uruchomienie
 
