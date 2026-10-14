@@ -1,7 +1,7 @@
 {
   "name": "fluid-shape",
   "version": "1.0.0",
-  "description": "Interactive iridescent sculpture that morphs between a ribbon and an organic sphere",
+  "description": "Interactive particle cloud that follows cursor strokes and gathers into an organic sphere",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",

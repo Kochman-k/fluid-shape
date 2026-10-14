@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('renders WebGL and morphs from idle to ribbon and back', async ({ page }) => {
+test('renders the particle cloud and gathers the moving trail back into a sphere', async ({ page }) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => {
@@ -9,6 +9,7 @@ test('renders WebGL and morphs from idle to ribbon and back', async ({ page }) =
   await page.goto('/');
   const canvas = page.locator('canvas');
   await expect(canvas).toHaveAttribute('data-ready', 'true');
+  expect(Number(await canvas.getAttribute('data-particles'))).toBeGreaterThan(10000);
   await expect.poll(async () => Number(await canvas.getAttribute('data-morph'))).toBeLessThan(.1);
   await page.screenshot({ path: '/tmp/fluid-idle.png' });
   await page.evaluate(() => {
@@ -23,6 +24,7 @@ test('renders WebGL and morphs from idle to ribbon and back', async ({ page }) =
     }, 35);
   });
   await expect.poll(async () => Number(await canvas.getAttribute('data-morph'))).toBeGreaterThan(.8);
+  await page.waitForTimeout(1100);
   await page.screenshot({ path: '/tmp/fluid-ribbon.png' });
   await page.evaluate(() => clearInterval(window.testMovement));
   await expect.poll(async () => Number(await canvas.getAttribute('data-morph'))).toBeLessThan(.1);
@@ -33,17 +35,17 @@ test('material, sliders, pause, reset, information and export work', async ({ pa
   await page.goto('/');
   await expect(page.locator('canvas')).toHaveAttribute('data-ready', 'true');
   await page.getByRole('button', { name: 'Amber', exact: true }).click();
-  await expect(page.locator('#material-label')).toHaveText('AMBER RESIN');
-  await page.locator('#transparency').fill('30');
-  await expect(page.locator('#transparency-value')).toHaveText('30%');
+  await expect(page.locator('#material-label')).toHaveText('AMBER DUST');
+  await page.locator('#dispersion').fill('30');
+  await expect(page.locator('#dispersion-value')).toHaveText('30%');
   await page.getByRole('button', { name: 'Wstrzymaj animację', exact: true }).click();
   const before = await page.locator('canvas').getAttribute('data-morph');
   await page.mouse.move(500, 500);
   await page.waitForTimeout(200);
   await expect(page.locator('canvas')).toHaveAttribute('data-morph', before);
   await page.getByRole('button', { name: 'Przywróć ustawienia', exact: true }).click();
-  await expect(page.locator('#transparency-value')).toHaveText('38%');
-  await expect(page.locator('#material-label')).toHaveText('EMBER RESIN');
+  await expect(page.locator('#dispersion-value')).toHaveText('58%');
+  await expect(page.locator('#material-label')).toHaveText('ROSE DUST');
   await page.getByRole('button', { name: 'O projekcie' }).click();
   await expect(page.locator('dialog')).toBeVisible();
   await page.keyboard.press('Escape');
@@ -51,7 +53,7 @@ test('material, sliders, pause, reset, information and export work', async ({ pa
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Zapisz obraz rzeźby' }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe('fluid-ember.png');
+  expect(download.suggestedFilename()).toBe('fluid-rose.png');
 });
 
 test('mobile layout fits the screen and supports touch input', async ({ page }) => {

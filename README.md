@@ -1,6 +1,8 @@
 # Fluid
 
-Interaktywna rzeźba WebGL: ruch kursora lub palca rysuje skręconą wstęgę po rzeczywistym torze ruchu. Jej początek podąża za kursorem, a starsze fragmenty pozostają w ogonie jak ślad żywicznego pędzla. Każdy odcinek ma własną prędkość i opór, więc przy skrętach ogon opóźnia się i zaokrągla tor, a po zatrzymaniu jeszcze przez chwilę dryfuje. Po zatrzymaniu ślad wyhamowuje i zbiera się w organiczną kulę w pobliżu końca gestu. Szybkie gesty zachowują więcej bezwładności: ogon pozostaje widoczny podczas formowania sfery, zamiast najpierw znikać w cienką kreskę. Materiał Ember ma ciepłą czerwień, bursztynowe odbicia i satynowy połysk żywicy. Szersza wstęga morfuje w asymetryczną bryłę z nieregularnymi polygonami. Przecięcia 28 płaszczyzn wyznaczają rzeczywiste ścięcia obrysu. Ten sam układ faset pozostaje widoczny na całej skręconej wstędze. Losowanie kształtu generuje nowy układ polygonów. Materiał wykorzystuje odbicia studyjne, transmisję i powłokę clearcoat. Cała geometria, oświetlenie i tekstury powstają lokalnie.
+Interaktywna chmura WebGL: 24 000 drobinek na komputerze lub 12 000 na telefonie. Ruch kursora lub palca rozciąga pył w ślad podążający za rzeczywistym torem gestu. Każda cząstka ma własną pozycję i prędkość, dzięki czemu po zatrzymaniu stopniowo wraca do zwartej, nieregularnej kuli. Ten sam układ cząstek jest używany przez cały czas — przejście nie podmienia brył ani nie teleportuje drobinek.
+
+Stylistyka Rose jest inspirowana ziarnistym, różowym pyłem z nagrania referencyjnego. Ember i Amber zachowują ciepłe warianty kolorystyczne. Oświetlenie pojedynczych ziaren, różne wielkości punktów i delikatne dryfowanie nadają chmurze głębię. Wszystkie zasoby powstają lokalnie.
 
 ## Uruchomienie
 
@@ -29,8 +31,8 @@ Jeśli Pages nie jest dostępne dla prywatnego repozytorium w Twoim planie GitHu
 ## Sterowanie
 
 - Poruszaj kursorem po scenie lub przesuwaj palcem na ekranie dotykowym.
-- Ember (czerwień), Amber (bursztyn) i Chrome zmieniają wygląd powierzchni. Domyślna transmisja 38% daje efekt półprzezroczystej, polerowanej żywicy.
-- Przezroczystość reguluje transmisję materiału; Chrome zachowuje metaliczny charakter.
+- Rose, Ember i Amber zmieniają kolor drobinek.
+- Rozproszenie zmienia szerokość i luźność pyłowego śladu.
 - Płynność określa długość pamięci śladu i łagodność reakcji.
 - Pauza zatrzymuje animację; reset przywraca ustawienia.
 - Narzędzia poniżej sceny losują kształt, zapisują PNG sceny i włączają pełny ekran, jeśli przeglądarka go obsługuje.
@@ -44,6 +46,6 @@ npm run build
 npm test
 ```
 
-Testy jednostkowe sprawdzają zachowanie zakrętów w śladzie, rozpoczęcie nowego gestu po spoczynku oraz ograniczenie pamięci historii. Testy Playwright sprawdzają renderowanie WebGL, przejście kula–wstęga–kula, materiały, suwaki, pauzę, reset, okno informacji, pobieranie PNG i układ mobilny z dotykiem. Domyślnie używają `/usr/bin/chromium`; inną przeglądarkę można wskazać przez `CHROMIUM_PATH`. Testy używają programowego renderowania WebGL w środowisku cloud. Serwer deweloperski uruchamia się automatycznie, jeśli nie działa.
+Testy jednostkowe sprawdzają zachowanie śladu i bezwładności, poprawność kształtu oraz ciągłość położenia drobinek podczas zmiany celu i losowania. Testy Playwright sprawdzają renderowanie WebGL, przejście kula–pyłowy ślad–kula, kolory, suwaki, pauzę, reset, okno informacji, pobieranie PNG i układ mobilny z dotykiem. Domyślnie używają `/usr/bin/chromium`; inną przeglądarkę można wskazać przez `CHROMIUM_PATH`. Testy używają programowego renderowania WebGL w środowisku cloud. Serwer deweloperski uruchamia się automatycznie, jeśli nie działa.
 
 Inspiracja: [Blobmixer / 14islands](https://blobmixer.14islands.com/).
