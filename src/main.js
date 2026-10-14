@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import './style.css';
 import { StrokeTrail } from './stroke.js';
 import { StrokeSettling } from './settling.js';
+import { RibbonFlow } from './flow.js';
 
 const $ = (id) => document.getElementById(id);
 const container = $('canvas-container');
@@ -26,7 +27,8 @@ const ringCount = longitudinalSegments + 1;
 const trailPoints = Array.from({ length: ringCount }, () => new THREE.Vector3());
 const ringCenters = Array.from({ length: ringCount }, () => new THREE.Vector3());
 const ringNormals = Array.from({ length: ringCount }, () => new THREE.Vector2(0, 1));
-const trailCurve = new THREE.CatmullRomCurve3(trailPoints, false, 'centripetal');
+const flow = new RibbonFlow(ringCount);
+const trailCurve = new THREE.CatmullRomCurve3(flow.points, false, 'centripetal');
 const tangent = new THREE.Vector3();
 const cursorWorld = new THREE.Vector3();
 let base;
@@ -127,13 +129,14 @@ function onPointer(event) {
   if (pointer.distanceToSquared(previousPointer) > .00000001) {
     const now = performance.now();
     stroke.add(pointer.x, pointer.y, now);
+    if (stroke.points.length === 1) flow.reset();
     settling.move(pointer.x, pointer.y, now);
   }
 }
 container.addEventListener('pointermove', onPointer);
 container.addEventListener('pointerdown', onPointer);
 
-function updateStroke(now, time) {
+function updateStroke(now, time, dt, idleSeconds) {
   const halfHeight = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
   const halfWidth = halfHeight * camera.aspect;
   const duration = 600 + settings.response * 7;
@@ -143,6 +146,7 @@ function updateStroke(now, time) {
     trailPoints[row].y *= halfHeight;
   }
   cursorWorld.copy(trailPoints[0]);
+  flow.step(trailPoints, dt, settings.response / 100, idleSeconds, settling.energy);
   // Sample the historical path once per cross-section, not once per vertex.
   for (let row = 0; row < ringCount; row++) {
     const along = (1 - Math.cos(Math.PI * row / (ringCount - 1))) / 2;
@@ -199,7 +203,8 @@ function animate(now) {
   morph = settling.morph;
 
   const mobile = camera.aspect < 1;
-  updateStroke(settling.trailTime, elapsed);
+  const idleSeconds = settling.lastMove === null ? 10 : Math.max(0, (now - settling.lastMove) / 1000);
+  updateStroke(settling.trailTime, elapsed, dt, idleSeconds);
   const halfHeight = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
   const halfWidth = halfHeight * camera.aspect;
   const radius = mobile ? 1.15 : 1.5;
@@ -268,7 +273,7 @@ function updatePause() {
 $('pause').addEventListener('click', () => { settings.paused = !settings.paused; updatePause(); });
 $('reset').addEventListener('click', () => {
   Object.assign(settings, defaults);
-  seed = 1.7; pointer.set(0, 0); stroke.clear(); settling.reset();
+  seed = 1.7; pointer.set(0, 0); stroke.clear(); settling.reset(); flow.reset();
   updateMaterial(); updateSliders(); updatePause(); toast('Przywrócono początkową formę');
 });
 $('shuffle').addEventListener('click', () => { seed = Math.random() * 20; toast('Nowa forma. Nowy rytm.'); });
