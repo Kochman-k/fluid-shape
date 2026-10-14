@@ -3,23 +3,28 @@ import './style.css';
 
 const $ = (id) => document.getElementById(id);
 const container = $('canvas-container');
-const settings = { transparency: 65, response: 70, preset: 'opal', paused: false };
+const defaults = { transparency: 92, response: 85, preset: 'opal', paused: false };
+const settings = { ...defaults };
 const palettes = {
-  opal: { color: '#ddd9ff', metalness: .22, iridescence: 1, label: 'OPAL GLASS' },
-  rose: { color: '#f6c7b5', metalness: .32, iridescence: .45, label: 'ROSE GLASS' },
+  opal: { color: '#f4faff', metalness: .015, iridescence: .65, label: 'OPAL GLASS' },
+  rose: { color: '#fff0ec', metalness: .025, iridescence: .4, label: 'ROSE GLASS' },
   chrome: { color: '#e0e3f0', metalness: .96, iridescence: .18, label: 'LIQUID CHROME' },
 };
 let renderer, scene, camera, sculpture, geometry, material;
 let seed = 1.7, morph = 0, elapsed = 0, lastFrame = 0, lastMove = -10000;
 let pointer = new THREE.Vector2(), previousPointer = new THREE.Vector2();
-let velocity = new THREE.Vector2(), follow = new THREE.Vector2();
+const velocity = new THREE.Vector2(), follow = new THREE.Vector2();
+const followVelocity = new THREE.Vector2();
+const pointerDelta = new THREE.Vector2();
+const followTarget = new THREE.Vector2();
+let lastPointerTime = 0;
 let angle = 0, targetAngle = 0;
 let base;
 let ready = false;
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 function initialize() {
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: false });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
@@ -54,15 +59,17 @@ function initialize() {
   pmrem.dispose();
 
   material = new THREE.MeshPhysicalMaterial({
-    color: '#ddd9ff', metalness: .22, roughness: .075,
-    transmission: .65, thickness: 1.1, ior: 1.48,
-    iridescence: 1, iridescenceIOR: 1.32, iridescenceThicknessRange: [180, 580],
-    clearcoat: 1, clearcoatRoughness: .035, envMapIntensity: 1.1,
-    attenuationColor: '#d5c1f0', attenuationDistance: 4,
+    color: '#f4faff', metalness: .015, roughness: .035,
+    transmission: .92, thickness: .45, ior: 1.45,
+    iridescence: .65, iridescenceIOR: 1.3, iridescenceThicknessRange: [150, 450],
+    clearcoat: .65, clearcoatRoughness: .025, envMapIntensity: .8,
+    attenuationColor: '#e5efff', attenuationDistance: 12,
     side: THREE.DoubleSide,
   });
   geometry = new THREE.SphereGeometry(1, 80, 56);
   base = geometry.attributes.position.array.slice();
+  // The complete morph fits this bound; avoid rescanning vertices each frame.
+  geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 3.7);
   sculpture = new THREE.Mesh(geometry, material);
   scene.add(sculpture);
   const rim = new THREE.DirectionalLight('#e1ddff', .8);
@@ -106,14 +113,16 @@ function onPointer(event) {
   const rect = container.getBoundingClientRect();
   previousPointer.copy(pointer);
   pointer.set(((event.clientX - rect.left) / rect.width - .5) * 2, -((event.clientY - rect.top) / rect.height - .5) * 2);
-  velocity.subVectors(pointer, previousPointer);
-  if (velocity.length() > .001) {
-    lastMove = performance.now();
-    targetAngle = Math.atan2(velocity.y, velocity.x);
-    // A ribbon has no forward orientation; choose the nearest half turn.
-    while (targetAngle - angle > Math.PI / 2) targetAngle -= Math.PI;
-    while (targetAngle - angle < -Math.PI / 2) targetAngle += Math.PI;
+  const now = performance.now();
+  const sampleTime = THREE.MathUtils.clamp((now - lastPointerTime) / 1000, .008, .1);
+  pointerDelta.subVectors(pointer, previousPointer);
+  if (pointerDelta.length() > .0001) {
+    // Smooth the measured direction, rather than rotating on every mouse event.
+    pointerDelta.divideScalar(sampleTime);
+    velocity.lerp(pointerDelta, 1 - Math.exp(-sampleTime * 12));
+    lastMove = now;
   }
+  lastPointerTime = now;
 }
 container.addEventListener('pointermove', onPointer);
 container.addEventListener('pointerdown', onPointer);
@@ -141,7 +150,6 @@ function deform(time) {
   }
   positions.needsUpdate = true;
   geometry.computeVertexNormals();
-  geometry.computeBoundingSphere();
 }
 
 function animate(now) {
@@ -151,18 +159,43 @@ function animate(now) {
   if (settings.paused) return;
   const motionScale = reducedMotion.matches ? .22 : 1;
   elapsed += dt * motionScale;
-  const active = now - lastMove < 350;
-  const targetMorph = active ? motionScale : 0;
-  const rate = 3 + (100 - settings.response) * .055;
-  morph = THREE.MathUtils.damp(morph, targetMorph, rate, dt);
-  follow.lerp(pointer, 1 - Math.exp(-dt * 2.5));
-  angle = THREE.MathUtils.damp(angle, targetAngle, 3, dt);
+  const idleSeconds = Math.max(0, (now - lastMove) / 1000 - .15);
+  // Gradually release motion so short gaps between pointer events never snap the shape.
+  const activity = Math.exp(-idleSeconds / .5);
+  const targetMorph = activity * motionScale;
+  const softness = settings.response / 100;
+  morph = THREE.MathUtils.damp(morph, targetMorph, 5 - softness * 3, dt);
+
+  // An exact critically damped spring preserves momentum through direction changes.
+  // Position returns to the center through the same spring, without multiplying
+  // the rendered position by morph and introducing a second source of movement.
+  followTarget.copy(pointer).multiplyScalar(morph);
+  const frequency = 10 - softness * 4;
+  const decay = Math.exp(-frequency * dt);
+  for (const axis of ['x', 'y']) {
+    const offset = follow[axis] - followTarget[axis];
+    const impulse = (followVelocity[axis] + frequency * offset) * dt;
+    follow[axis] = followTarget[axis] + (offset + impulse) * decay;
+    followVelocity[axis] = (followVelocity[axis] - frequency * impulse) * decay;
+  }
+
+  if (activity > .6 && velocity.lengthSq() > .0025) {
+    targetAngle = Math.atan2(velocity.y, velocity.x);
+    while (targetAngle - angle > Math.PI / 2) targetAngle -= Math.PI;
+    while (targetAngle - angle < -Math.PI / 2) targetAngle += Math.PI;
+  } else if (morph < .04) {
+    // Keep an equivalent orientation close to zero before the next gesture.
+    angle = THREE.MathUtils.euclideanModulo(angle + Math.PI, Math.PI * 2) - Math.PI;
+    targetAngle = Math.sin(elapsed * .2) * .12;
+  }
+  angle = THREE.MathUtils.damp(angle, targetAngle, 4 - softness * 2.2, dt);
   deform(elapsed);
   const mobile = camera.aspect < 1;
   const originX = mobile ? 0 : -.55;
-  sculpture.position.set(originX + follow.x * (mobile ? .7 : 1.8) * morph, (mobile ? .45 : -.1) + follow.y * 1.1 * morph, 0);
+  sculpture.position.set(originX + follow.x * (mobile ? .7 : 1.8), (mobile ? .45 : -.1) + follow.y * 1.1, 0);
   sculpture.scale.setScalar(mobile ? .78 : 1);
-  sculpture.rotation.set(Math.sin(elapsed * .15) * .12, elapsed * .12 * (1 - morph), angle * morph + Math.sin(elapsed * .2) * .12 * (1 - morph));
+  const yaw = THREE.MathUtils.damp(sculpture.rotation.y, Math.sin(elapsed * .16) * .25 * (1 - morph), 2, dt);
+  sculpture.rotation.set(Math.sin(elapsed * .15) * .12, yaw, angle);
   sculpture.userData.shadow.position.x = sculpture.position.x;
   sculpture.userData.shadow.position.y = mobile ? -1.1 : -1.85;
   sculpture.userData.shadow.scale.x = 1 + morph * .3;
@@ -179,7 +212,7 @@ function updateMaterial() {
   material.metalness = palette.metalness;
   material.iridescence = palette.iridescence;
   material.transmission = settings.preset === 'chrome' ? settings.transparency / 100 * .18 : settings.transparency / 100;
-  material.attenuationColor.set(settings.preset === 'rose' ? '#e8acae' : '#d5c1f0');
+  material.attenuationColor.set(settings.preset === 'rose' ? '#ffe9e3' : '#e5efff');
   $('material-label').textContent = palette.label;
   document.querySelectorAll('.preset').forEach(button => {
     const active = button.dataset.preset === settings.preset;
@@ -208,8 +241,8 @@ function updatePause() {
 }
 $('pause').addEventListener('click', () => { settings.paused = !settings.paused; updatePause(); });
 $('reset').addEventListener('click', () => {
-  Object.assign(settings, { transparency: 65, response: 70, preset: 'opal', paused: false });
-  seed = 1.7; pointer.set(0, 0); lastMove = -10000;
+  Object.assign(settings, defaults);
+  seed = 1.7; pointer.set(0, 0); velocity.set(0, 0); lastMove = -10000; lastPointerTime = 0;
   updateMaterial(); updateSliders(); updatePause(); toast('Przywrócono początkową formę');
 });
 $('shuffle').addEventListener('click', () => { seed = Math.random() * 20; toast('Nowa forma. Nowy rytm.'); });

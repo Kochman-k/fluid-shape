@@ -39,7 +39,7 @@ test('material, sliders, pause, reset, information and export work', async ({ pa
   await page.waitForTimeout(200);
   await expect(page.locator('canvas')).toHaveAttribute('data-morph', before);
   await page.getByRole('button', { name: 'Przywróć ustawienia', exact: true }).click();
-  await expect(page.locator('#transparency-value')).toHaveText('65%');
+  await expect(page.locator('#transparency-value')).toHaveText('92%');
   await expect(page.locator('#material-label')).toHaveText('OPAL GLASS');
   await page.getByRole('button', { name: 'O projekcie' }).click();
   await expect(page.locator('dialog')).toBeVisible();
