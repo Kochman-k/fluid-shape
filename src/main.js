@@ -3,7 +3,7 @@ import './style.css';
 import { StrokeTrail } from './stroke.js';
 import { StrokeSettling } from './settling.js';
 import { RibbonFlow } from './flow.js';
-import { addResinFacets } from './resin.js';
+import { addResinFacets, createResinPlanes, resinRadius } from './resin.js';
 
 const $ = (id) => document.getElementById(id);
 const container = $('canvas-container');
@@ -32,7 +32,7 @@ const flow = new RibbonFlow(ringCount);
 const trailCurve = new THREE.CatmullRomCurve3(flow.points, false, 'centripetal');
 const tangent = new THREE.Vector3();
 const cursorWorld = new THREE.Vector3();
-let base;
+let base, cutRadii;
 let ready = false;
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -93,6 +93,8 @@ function initialize() {
   resinUniforms = addResinFacets(material);
   geometry = new THREE.SphereGeometry(1, radialSegments, longitudinalSegments);
   base = geometry.attributes.position.array.slice();
+  geometry.setAttribute('resinDirection', new THREE.BufferAttribute(base.slice(), 3));
+  updateCuts();
   sculpture = new THREE.Mesh(geometry, material);
   // A cursor stroke can span the viewport and cross the original sphere bounds.
   sculpture.frustumCulled = false;
@@ -176,6 +178,13 @@ function updateStroke(now, time, dt, idleSeconds) {
   }
 }
 
+function updateCuts() {
+  cutRadii = new Float32Array(base.length / 3);
+  for (let i = 0; i < base.length; i += 3) {
+    cutRadii[i / 3] = resinRadius(base[i], base[i + 1], base[i + 2], resinUniforms.resinPlanes.value);
+  }
+}
+
 function deform(time, mobile) {
   const positions = geometry.attributes.position;
   const a = positions.array;
@@ -184,13 +193,14 @@ function deform(time, mobile) {
     const x = base[i], y = base[i + 1], z = base[i + 2];
     const row = Math.floor(i / 3 / (radialSegments + 1));
     const along = (1 - y) / 2;
-    const organic = 1 + .025 * Math.sin(x * 2.4 + y * 2.8 + time * .48 + seed) * Math.cos(z * 2.5 - x * 1.2 - time * .36) + .015 * Math.sin(y * 3.5 - z * 2 + time * .32 + seed);
+    const cut = cutRadii[i / 3];
+    const organic = cut * (1 + .012 * Math.sin(time * .45 + seed));
     const bx = follow.x + x * organic * 1.35 * scale;
     const by = follow.y + y * organic * 1.38 * scale;
     const bz = z * organic * 1.35 * scale;
     const rotation = along * 7 - time * 1.25 + seed;
-    const width = x * .52 * scale;
-    const depth = z * .065 * scale;
+    const width = x * .52 * scale * cut;
+    const depth = z * .065 * scale * cut;
     const sideways = width * Math.cos(rotation) - depth * Math.sin(rotation);
     const center = ringCenters[row], normal = ringNormals[row];
     const rx = center.x + normal.x * sideways;
@@ -287,10 +297,17 @@ function updatePause() {
 $('pause').addEventListener('click', () => { settings.paused = !settings.paused; updatePause(); });
 $('reset').addEventListener('click', () => {
   Object.assign(settings, defaults);
-  seed = 1.7; pointer.set(0, 0); stroke.clear(); settling.reset(); flow.reset();
+  seed = 1.7;
+  resinUniforms.resinPlanes.value = createResinPlanes(seed); updateCuts();
+  pointer.set(0, 0); stroke.clear(); settling.reset(); flow.reset();
   updateMaterial(); updateSliders(); updatePause(); toast('Przywrócono początkową formę');
 });
-$('shuffle').addEventListener('click', () => { seed = Math.random() * 20; toast('Nowa forma. Nowy rytm.'); });
+$('shuffle').addEventListener('click', () => {
+  seed = Math.random() * 20;
+  resinUniforms.resinPlanes.value = createResinPlanes(seed);
+  updateCuts();
+  toast('Nowy układ nieregularnych faset');
+});
 $('capture').addEventListener('click', () => {
   if (!ready) return;
   renderer.render(scene, camera);
