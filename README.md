@@ -1,6 +1,6 @@
 # Fluid
 
-Interaktywna rzeźba WebGL: ruch kursora lub palca rysuje skręconą wstęgę po rzeczywistym torze ruchu. Jej początek podąża za kursorem, a starsze fragmenty pozostają w ogonie jak ślad szklanego pędzla. Każdy odcinek ma własną prędkość i opór, więc przy skrętach ogon opóźnia się i zaokrągla tor, a po zatrzymaniu jeszcze przez chwilę dryfuje. Po zatrzymaniu ślad wyhamowuje i zbiera się w organiczną kulę w pobliżu końca gestu. Szybkie gesty zachowują więcej bezwładności: ogon pozostaje widoczny podczas formowania sfery, zamiast najpierw znikać w cienką kreskę. Materiał wykorzystuje odbicia studyjne, transmisję, iryzację i powłokę clearcoat. Cała geometria, oświetlenie i tekstury powstają lokalnie.
+Interaktywna rzeźba WebGL: ruch kursora lub palca rysuje skręconą wstęgę po rzeczywistym torze ruchu. Jej początek podąża za kursorem, a starsze fragmenty pozostają w ogonie jak ślad żywicznego pędzla. Każdy odcinek ma własną prędkość i opór, więc przy skrętach ogon opóźnia się i zaokrągla tor, a po zatrzymaniu jeszcze przez chwilę dryfuje. Po zatrzymaniu ślad wyhamowuje i zbiera się w organiczną kulę w pobliżu końca gestu. Szybkie gesty zachowują więcej bezwładności: ogon pozostaje widoczny podczas formowania sfery, zamiast najpierw znikać w cienką kreskę. Materiał Ember ma ciepłą czerwień, bursztynowe odbicia i satynowy połysk żywicy. Szersza wstęga morfuje w kulę z szerokimi fasetami odbijającymi światło; jej obrys pozostaje gładki. Materiał wykorzystuje odbicia studyjne, transmisję i powłokę clearcoat. Cała geometria, oświetlenie i tekstury powstają lokalnie.
 
 ## Uruchomienie
 
@@ -29,7 +29,7 @@ Jeśli Pages nie jest dostępne dla prywatnego repozytorium w Twoim planie GitHu
 ## Sterowanie
 
 - Poruszaj kursorem po scenie lub przesuwaj palcem na ekranie dotykowym.
-- Opal, Rose i Chrome zmieniają wygląd powierzchni.
+- Ember (czerwień), Amber (bursztyn) i Chrome zmieniają wygląd powierzchni. Domyślna transmisja 38% daje efekt półprzezroczystej, polerowanej żywicy.
 - Przezroczystość reguluje transmisję materiału; Chrome zachowuje metaliczny charakter.
 - Płynność określa długość pamięci śladu i łagodność reakcji.
 - Pauza zatrzymuje animację; reset przywraca ustawienia.

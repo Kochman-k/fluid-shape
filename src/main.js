@@ -3,17 +3,18 @@ import './style.css';
 import { StrokeTrail } from './stroke.js';
 import { StrokeSettling } from './settling.js';
 import { RibbonFlow } from './flow.js';
+import { addResinFacets } from './resin.js';
 
 const $ = (id) => document.getElementById(id);
 const container = $('canvas-container');
-const defaults = { transparency: 92, response: 85, preset: 'opal', paused: false };
+const defaults = { transparency: 38, response: 85, preset: 'ember', paused: false };
 const settings = { ...defaults };
 const palettes = {
-  opal: { color: '#f4faff', metalness: .015, iridescence: .65, label: 'OPAL GLASS' },
-  rose: { color: '#fff0ec', metalness: .025, iridescence: .4, label: 'ROSE GLASS' },
-  chrome: { color: '#e0e3f0', metalness: .96, iridescence: .18, label: 'LIQUID CHROME' },
+  ember: { color: '#ff350b', metalness: .045, iridescence: 0, label: 'EMBER RESIN', absorption: '#ff7526' },
+  amber: { color: '#ff970d', metalness: .035, iridescence: 0, label: 'AMBER RESIN', absorption: '#ffba45' },
+  chrome: { color: '#e0e3f0', metalness: .96, iridescence: .18, label: 'LIQUID CHROME', absorption: '#ffffff' },
 };
-let renderer, scene, camera, sculpture, geometry, material;
+let renderer, scene, camera, sculpture, geometry, material, resinUniforms;
 let seed = 1.7, morph = 0, elapsed = 0, lastFrame = 0;
 let pointer = new THREE.Vector2(), previousPointer = new THREE.Vector2();
 const follow = new THREE.Vector2();
@@ -44,18 +45,29 @@ function initialize() {
   container.appendChild(renderer.domElement);
   renderer.domElement.setAttribute('aria-hidden', 'true');
   scene = new THREE.Scene();
-  scene.background = new THREE.Color('#eeedf4');
+  const background = document.createElement('canvas');
+  background.width = background.height = 512;
+  const backdrop = background.getContext('2d');
+  const warmth = backdrop.createLinearGradient(0, 0, 512, 512);
+  warmth.addColorStop(0, '#ffa78b');
+  warmth.addColorStop(.5, '#ffc28b');
+  warmth.addColorStop(1, '#ffe69a');
+  backdrop.fillStyle = warmth;
+  backdrop.fillRect(0, 0, 512, 512);
+  const backgroundTexture = new THREE.CanvasTexture(background);
+  backgroundTexture.colorSpace = THREE.SRGBColorSpace;
+  scene.background = backgroundTexture;
   camera = new THREE.PerspectiveCamera(36, 1, .1, 100);
   camera.position.set(0, 0, 9);
 
   const room = new THREE.Scene();
-  room.background = new THREE.Color('#33303d');
+  room.background = new THREE.Color('#65301d');
   // Large studio softboxes produce crisp highlights without remote HDR assets.
-  const cardGeometry = new THREE.PlaneGeometry(2.5, 7);
+  const cardGeometry = new THREE.PlaneGeometry(4.5, 7);
   for (const [x, y, z, color, intensity] of [
-    [-4, 2, 4, '#ffffff', 3], [4, 1, 2, '#eecbff', 2],
-    [0, 5, -2, '#ffffff', 3], [-3, -1, -3, '#8edcf8', 2],
-    [3, -3, 1, '#ffd8ad', 2],
+    [-4, 2, 4, '#fff5e7', 3], [4, 1, 2, '#ffe69a', 3],
+    [0, 5, -2, '#fff9ef', 3], [-3, -1, -3, '#ff6035', 2],
+    [3, -3, 1, '#ffb833', 3],
   ]) {
     const card = new THREE.Mesh(cardGeometry, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }));
     card.material.color.multiplyScalar(intensity);
@@ -71,23 +83,24 @@ function initialize() {
   pmrem.dispose();
 
   material = new THREE.MeshPhysicalMaterial({
-    color: '#f4faff', metalness: .015, roughness: .035,
-    transmission: .92, thickness: .45, ior: 1.45,
-    iridescence: .65, iridescenceIOR: 1.3, iridescenceThicknessRange: [150, 450],
-    clearcoat: .65, clearcoatRoughness: .025, envMapIntensity: .8,
-    attenuationColor: '#e5efff', attenuationDistance: 12,
+    color: '#ff350b', metalness: .045, roughness: .22,
+    transmission: .38, thickness: .85, ior: 1.48,
+    iridescence: 0,
+    clearcoat: 1, clearcoatRoughness: .2, envMapIntensity: 1,
+    attenuationColor: '#ff7526', attenuationDistance: 2.2,
     side: THREE.DoubleSide,
   });
+  resinUniforms = addResinFacets(material);
   geometry = new THREE.SphereGeometry(1, radialSegments, longitudinalSegments);
   base = geometry.attributes.position.array.slice();
   sculpture = new THREE.Mesh(geometry, material);
   // A cursor stroke can span the viewport and cross the original sphere bounds.
   sculpture.frustumCulled = false;
   scene.add(sculpture);
-  const rim = new THREE.DirectionalLight('#e1ddff', .8);
+  const rim = new THREE.DirectionalLight('#fff0dc', 2);
   rim.position.set(3, 4, 5);
   scene.add(rim);
-  const light = new THREE.DirectionalLight('#b6e8f2', .6);
+  const light = new THREE.DirectionalLight('#ffb547', 1.2);
   light.position.set(-4, 1, 2);
   scene.add(light);
 
@@ -96,9 +109,9 @@ function initialize() {
   shadowCanvas.width = shadowCanvas.height = 128;
   const ctx = shadowCanvas.getContext('2d');
   const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-  gradient.addColorStop(0, 'rgba(98,79,135,0.22)');
-  gradient.addColorStop(.35, 'rgba(110,90,150,0.10)');
-  gradient.addColorStop(1, 'rgba(110,90,150,0)');
+  gradient.addColorStop(0, 'rgba(164,46,12,0.2)');
+  gradient.addColorStop(.35, 'rgba(164,65,12,0.10)');
+  gradient.addColorStop(1, 'rgba(164,65,12,0)');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, 128, 128);
   const shadow = new THREE.Mesh(new THREE.PlaneGeometry(4.7, 1), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(shadowCanvas), transparent: true, depthWrite: false }));
@@ -171,13 +184,13 @@ function deform(time, mobile) {
     const x = base[i], y = base[i + 1], z = base[i + 2];
     const row = Math.floor(i / 3 / (radialSegments + 1));
     const along = (1 - y) / 2;
-    const organic = 1 + .18 * Math.sin(x * 2.4 + y * 2.8 + time * .48 + seed) * Math.cos(z * 2.5 - x * 1.2 - time * .36) + .09 * Math.sin(y * 3.5 - z * 2 + time * .32 + seed);
+    const organic = 1 + .025 * Math.sin(x * 2.4 + y * 2.8 + time * .48 + seed) * Math.cos(z * 2.5 - x * 1.2 - time * .36) + .015 * Math.sin(y * 3.5 - z * 2 + time * .32 + seed);
     const bx = follow.x + x * organic * 1.35 * scale;
-    const by = follow.y + y * organic * 1.43 * scale;
-    const bz = z * organic * 1.25 * scale;
+    const by = follow.y + y * organic * 1.38 * scale;
+    const bz = z * organic * 1.35 * scale;
     const rotation = along * 7 - time * 1.25 + seed;
-    const width = x * .34 * scale;
-    const depth = z * .055 * scale;
+    const width = x * .52 * scale;
+    const depth = z * .065 * scale;
     const sideways = width * Math.cos(rotation) - depth * Math.sin(rotation);
     const center = ringCenters[row], normal = ringNormals[row];
     const rx = center.x + normal.x * sideways;
@@ -201,6 +214,7 @@ function animate(now) {
   const softness = settings.response / 100;
   settling.step(now, dt, softness, motionScale);
   morph = settling.morph;
+  resinUniforms.resinMorph.value = morph;
 
   const mobile = camera.aspect < 1;
   const idleSeconds = settling.lastMove === null ? 10 : Math.max(0, (now - settling.lastMove) / 1000);
@@ -243,7 +257,7 @@ function updateMaterial() {
   material.metalness = palette.metalness;
   material.iridescence = palette.iridescence;
   material.transmission = settings.preset === 'chrome' ? settings.transparency / 100 * .18 : settings.transparency / 100;
-  material.attenuationColor.set(settings.preset === 'rose' ? '#ffe9e3' : '#e5efff');
+  material.attenuationColor.set(palette.absorption);
   $('material-label').textContent = palette.label;
   document.querySelectorAll('.preset').forEach(button => {
     const active = button.dataset.preset === settings.preset;

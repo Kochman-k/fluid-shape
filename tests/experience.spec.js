@@ -3,6 +3,9 @@ import { test, expect } from '@playwright/test';
 test('renders WebGL and morphs from idle to ribbon and back', async ({ page }) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => {
+    if (message.type() === 'error' && /THREE|shader|WebGL/i.test(message.text())) errors.push(message.text());
+  });
   await page.goto('/');
   const canvas = page.locator('canvas');
   await expect(canvas).toHaveAttribute('data-ready', 'true');
@@ -29,8 +32,8 @@ test('renders WebGL and morphs from idle to ribbon and back', async ({ page }) =
 test('material, sliders, pause, reset, information and export work', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('canvas')).toHaveAttribute('data-ready', 'true');
-  await page.getByRole('button', { name: 'Rose', exact: true }).click();
-  await expect(page.locator('#material-label')).toHaveText('ROSE GLASS');
+  await page.getByRole('button', { name: 'Amber', exact: true }).click();
+  await expect(page.locator('#material-label')).toHaveText('AMBER RESIN');
   await page.locator('#transparency').fill('30');
   await expect(page.locator('#transparency-value')).toHaveText('30%');
   await page.getByRole('button', { name: 'Wstrzymaj animację', exact: true }).click();
@@ -39,8 +42,8 @@ test('material, sliders, pause, reset, information and export work', async ({ pa
   await page.waitForTimeout(200);
   await expect(page.locator('canvas')).toHaveAttribute('data-morph', before);
   await page.getByRole('button', { name: 'Przywróć ustawienia', exact: true }).click();
-  await expect(page.locator('#transparency-value')).toHaveText('92%');
-  await expect(page.locator('#material-label')).toHaveText('OPAL GLASS');
+  await expect(page.locator('#transparency-value')).toHaveText('38%');
+  await expect(page.locator('#material-label')).toHaveText('EMBER RESIN');
   await page.getByRole('button', { name: 'O projekcie' }).click();
   await expect(page.locator('dialog')).toBeVisible();
   await page.keyboard.press('Escape');
@@ -48,7 +51,7 @@ test('material, sliders, pause, reset, information and export work', async ({ pa
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Zapisz obraz rzeźby' }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe('fluid-opal.png');
+  expect(download.suggestedFilename()).toBe('fluid-ember.png');
 });
 
 test('mobile layout fits the screen and supports touch input', async ({ page }) => {
