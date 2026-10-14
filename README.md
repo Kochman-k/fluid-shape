@@ -22,7 +22,7 @@ Aplikacja jest przygotowana do publikacji pod adresem https://kochman-k.github.i
 
 Jednorazowo w repozytorium otwórz **Settings → Pages → Build and deployment → Source** i wybierz **GitHub Actions**. Następnie w **Actions → Publish to GitHub Pages → Run workflow** uruchom publikację dla gałęzi `main`. Po pomyślnym zakończeniu zadania `deploy` otwórz adres strony. Jeśli GitHub wymaga zatwierdzenia środowiska `github-pages`, zatwierdź wdrożenie w zakładce Actions.
 
-Kolejne zmiany na `main` publikują się automatycznie. Workflow instaluje zależności z lockfile, kompiluje aplikację i wdraża `dist/` przez oficjalne akcje GitHub Pages. Konfiguracja Vite dodaje do kompilacji ścieżkę `/fluid-shape/`, aby skrypty i fonty działały na stronie repozytorium. Serwer deweloperski zachowuje ścieżkę `/`.
+Kolejne zmiany na `main` publikują się automatycznie. Wdrożenie ustawia źródło Pages na GitHub Actions i sprawdza publiczny HTML oraz dostępność skryptu i arkusza stylów. Dzięki temu publikacja surowych plików projektu nie przechodzi kontroli gotowości. Workflow instaluje zależności z lockfile, kompiluje aplikację i wdraża `dist/` przez oficjalne akcje GitHub Pages. Konfiguracja Vite dodaje do kompilacji ścieżkę `/fluid-shape/`, aby skrypty i fonty działały na stronie repozytorium. Serwer deweloperski zachowuje ścieżkę `/`.
 
 Jeśli Pages nie jest dostępne dla prywatnego repozytorium w Twoim planie GitHub, potrzebny jest plan obsługujący tę funkcję albo osobna decyzja o upublicznieniu repozytorium.
 

@@ -17,6 +17,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      index_sha: ${{ steps.fingerprint.outputs.index_sha }}
     steps:
       - name: Check out the project
         uses: actions/checkout@v4
@@ -29,6 +31,9 @@ jobs:
         run: npm ci
       - name: Build the site
         run: npm run build
+      - name: Record the compiled HTML fingerprint
+        id: fingerprint
+        run: echo "index_sha=$(sha256sum dist/index.html | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
       - name: Upload the website
         uses: actions/upload-pages-artifact@v3
         with:
@@ -41,6 +46,25 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Check out deployment checks
+        uses: actions/checkout@v4
+      - name: Ensure Pages uses workflow builds
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const { data: pages } = await github.rest.repos.getPages({ owner, repo });
+            if (pages.build_type !== 'workflow') {
+              await github.request('PUT /repos/{owner}/{repo}/pages', {
+                owner, repo, build_type: 'workflow'
+              });
+              core.info('Switched Pages from branch publishing to workflow publishing.');
+            }
       - name: Publish the site
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verify the public site and assets
+        env:
+          SITE_URL: ${{ steps.deployment.outputs.page_url }}
+          EXPECTED_INDEX_SHA: ${{ needs.build.outputs.index_sha }}
+        run: node .github/scripts/check-pages.mjs
