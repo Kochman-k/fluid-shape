@@ -16,6 +16,16 @@ Po uruchomieniu otwórz w przeglądarce adres podany w terminalu, zwykle `http:/
 
 `npm run build` tworzy produkcyjną wersję w `dist/`. `npm run preview` uruchamia podgląd kompilacji.
 
+## Podgląd online — GitHub Pages
+
+Aplikacja jest przygotowana do publikacji pod adresem https://kochman-k.github.io/fluid-shape/.
+
+Jednorazowo w repozytorium otwórz **Settings → Pages → Build and deployment → Source** i wybierz **GitHub Actions**. Następnie w **Actions → Publish to GitHub Pages → Run workflow** uruchom publikację dla gałęzi `main`. Po pomyślnym zakończeniu zadania `deploy` otwórz adres strony. Jeśli GitHub wymaga zatwierdzenia środowiska `github-pages`, zatwierdź wdrożenie w zakładce Actions.
+
+Kolejne zmiany na `main` publikują się automatycznie. Workflow instaluje zależności z lockfile, kompiluje aplikację i wdraża `dist/` przez oficjalne akcje GitHub Pages. Konfiguracja Vite dodaje do kompilacji ścieżkę `/fluid-shape/`, aby skrypty i fonty działały na stronie repozytorium. Serwer deweloperski zachowuje ścieżkę `/`.
+
+Jeśli Pages nie jest dostępne dla prywatnego repozytorium w Twoim planie GitHub, potrzebny jest plan obsługujący tę funkcję albo osobna decyzja o upublicznieniu repozytorium.
+
 ## Sterowanie
 
 - Poruszaj kursorem po scenie lub przesuwaj palcem na ekranie dotykowym.
