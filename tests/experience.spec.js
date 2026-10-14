@@ -61,8 +61,56 @@ test('mobile layout fits the screen and supports touch input', async ({ page }) 
   await page.goto('/');
   await expect(page.locator('canvas')).toHaveAttribute('data-ready', 'true');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await expect(page.locator('.controls')).toBeVisible();
+  await expect(page.locator('#particles-panel .controls')).toBeVisible();
   await page.locator('#canvas-container').dispatchEvent('pointermove', { clientX: 150, clientY: 330, pointerType: 'touch' });
   await expect.poll(async () => Number(await page.locator('canvas').getAttribute('data-morph'))).toBeGreaterThan(.1);
   await page.screenshot({ path: '/tmp/fluid-mobile.png' });
+});
+
+test('owl is rendered in a separate tab, rotates, exports and preserves particle settings', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => { if (message.type() === 'error' && /THREE|shader|WebGL/i.test(message.text())) errors.push(message.text()); });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Amber', exact: true }).click();
+  await page.getByRole('tab', { name: 'Polygonowa sowa' }).click();
+  const canvas = page.locator('#owl-canvas canvas');
+  await expect(canvas).toHaveAttribute('data-ready', 'true');
+  await expect(canvas).toHaveAttribute('data-azimuth', /.+/);
+  await expect(page.locator('#particles-panel')).toBeHidden();
+  const angle = Number(await canvas.getAttribute('data-azimuth'));
+  const bounds = await canvas.boundingBox();
+  await page.mouse.move(bounds.x + bounds.width * .5, bounds.y + bounds.height * .5);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + bounds.width * .67, bounds.y + bounds.height * .53, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(async () => Math.abs(Number(await canvas.getAttribute('data-azimuth')) - angle)).toBeGreaterThan(.3);
+  await page.locator('#owl-reset').click();
+  await page.screenshot({ path: '/tmp/fluid-owl.png' });
+  await page.getByRole('button', { name: 'Automatyczny obrót', exact: true }).click();
+  await expect(page.locator('#owl-rotate')).toHaveAttribute('aria-pressed', 'true');
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Zapisz obraz sowy' }).click();
+  expect((await downloadPromise).suggestedFilename()).toBe('fluid-owl.png');
+  await page.getByRole('tab', { name: 'Drobinki' }).click();
+  await expect(page.locator('#material-label')).toHaveText('AMBER DUST');
+  await expect(page.locator('#owl-panel')).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test('owl direct link supports touch rotation and fits a mobile screen', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const page = await context.newPage();
+  await page.goto('/#owl');
+  const canvas = page.locator('#owl-canvas canvas');
+  await expect(canvas).toHaveAttribute('data-azimuth', /.+/);
+  const angle = Number(await canvas.getAttribute('data-azimuth'));
+  const client = await context.newCDPSession(page);
+  await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 150, y: 420 }] });
+  await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 245, y: 440 }] });
+  await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect.poll(async () => Math.abs(Number(await canvas.getAttribute('data-azimuth')) - angle)).toBeGreaterThan(.3);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: '/tmp/fluid-owl-mobile.png' });
+  await context.close();
 });

@@ -4,6 +4,12 @@ Interaktywna chmura WebGL: 24 000 drobinek na komputerze lub 12 000 na telefonie
 
 Stylistyka Rose jest inspirowana ziarnistym, różowym pyłem z nagrania referencyjnego. Ember i Amber zachowują ciepłe warianty kolorystyczne. Oświetlenie pojedynczych ziaren, różne wielkości punktów i delikatne dryfowanie nadają chmurze głębię. Wszystkie zasoby powstają lokalnie.
 
+## Polygonowa sowa — drugi eksperyment
+
+Zakładka „Polygonowa sowa” (`#owl`) otwiera niezależną rzeźbę 3D inspirowaną czerwoną, lakierowaną sową. Model powstaje proceduralnie z zamkniętych polygonowych piór, brył głowy i skrzydeł, miedzianych pierścieni oraz szklistych źrenic. Pióra otaczają także plecy, więc model można oglądać z każdej strony. Odbicia środowiska, powłoka clearcoat i oświetlenie studyjne podkreślają fasety.
+
+Przeciąganie myszą lub palcem obraca model; kółko lub gest dwoma palcami przybliża widok. Po ustawieniu fokusu na scenie działają również strzałki. Panel umożliwia automatyczny obrót oraz przywrócenie widoku. Zapis PNG zawiera model z ciepłym tłem. Przełączenie zakładki zachowuje ustawienia obu eksperymentów i zatrzymuje renderowanie nieaktywnej sceny. Wszystkie zasoby modelu i odbić są lokalne.
+
 ## Uruchomienie
 
 Wymagany Node.js 22.12+ lub 24 oraz npm. Pobierz repozytorium (Code → Download ZIP), rozpakuj archiwum i otwórz terminal w katalogu nadrzędnym folderu projektu. Możesz też sklonować repozytorium poleceniem `git clone https://github.com/Kochman-k/fluid-shape.git`.

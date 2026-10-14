@@ -23,3 +23,45 @@ input[type=range]::-moz-range-thumb{background:#b55783;border-color:#fff7fa}
 .scene-tools{background:#fff0f595;border-color:#fff4f9bb}.scene-tools>span{background:#a8769036}
 footer{color:#90627c}dialog{background:#fff0f6;color:#60354c}dialog p{color:#94637f}
 #toast{background:#763951ed}#error{color:#833959}
+
+/* Each experiment owns its scene and keeps its state when switching tabs. */
+[hidden]{display:none!important}
+.experiment-panel{position:absolute;inset:0}
+.experiment-tabs{position:absolute;top:21px;left:50%;transform:translateX(-50%);z-index:3;display:flex;gap:4px;padding:4px;background:#ffffff60;border:1px solid #ffffff85;border-radius:30px;backdrop-filter:blur(16px);white-space:nowrap}
+.experiment-tabs button{padding:9px 15px;font-size:9px;letter-spacing:.5px;border-radius:24px;color:#93667d;display:flex;gap:10px;align-items:center}
+.experiment-tabs button span{font-size:11px;letter-spacing:0}
+.experiment-tabs button[aria-selected=true]{background:#fff4f5;color:#69394f;box-shadow:0 2px 8px #70344b0b}
+#owl-canvas{position:absolute;inset:0;touch-action:none;cursor:grab}
+#owl-canvas:active{cursor:grabbing}
+body[data-experiment=owl]{background:#f8be75;color:#692e1c}
+body[data-experiment=owl] #app{background:radial-gradient(ellipse at 78% 36%,#fff1b1 0%,#ffd68d 32%,#f4a26d 65%,#d86740 100%)}
+body[data-experiment=owl] .header,body[data-experiment=owl] footer{border-color:#74301520}
+body[data-experiment=owl] .header-caption,body[data-experiment=owl] .eyebrow,body[data-experiment=owl] .scene-label,body[data-experiment=owl] footer{color:#a65c34}
+body[data-experiment=owl] .brand-dot,body[data-experiment=owl] h1>span{color:#e4401b}
+body[data-experiment=owl] .intro p,body[data-experiment=owl] .gesture{color:#a35c38}
+body[data-experiment=owl] .gesture em{color:#b7774d}
+body[data-experiment=owl] .live-dot,body[data-experiment=owl] .eyebrow>span,body[data-experiment=owl] .mini-dot{background:#de4e25}
+body[data-experiment=owl] .label-line{background:#d49a66}
+body[data-experiment=owl] .experiment-tabs button{color:#a56844}
+body[data-experiment=owl] .experiment-tabs button[aria-selected=true]{background:#fff2d4;color:#793714}
+.owl-controls{background:#fff3d8a0;border-color:#fff5d5a8;box-shadow:0 16px 45px #a24d1710}
+.owl-controls .panel-title{margin-bottom:27px}.specimen-number{font-size:9px;letter-spacing:1px;color:#b77e52}
+.owl-controls .control-label,.owl-controls .control-label span{color:#b37a50}
+.owl-material{display:flex;align-items:center;gap:13px;font-size:12px;color:#9b4726}
+.owl-material .swatch{width:37px;height:37px}
+.owl-material small{display:block;font-size:7px;letter-spacing:1.2px;color:#b47e54;margin-top:6px}
+.owl-controls .divider{background:#af714c22}
+.owl-description{font-size:11px;line-height:1.9;color:#aa714b}
+.owl-controls .panel-bottom,.owl-controls .panel-bottom button{color:#a66940}
+.owl-reset{display:flex;gap:10px;justify-content:center;align-items:center;width:100%;margin-top:23px;padding:12px 8px;border:1px solid #ba805333;border-radius:8px;color:#a86740;font-size:17px}
+.owl-reset span{font-size:10px}.orbit-icon{font-size:32px;line-height:1}
+body[data-experiment=owl] .scene-tools{background:#fff0cf95;border-color:#fff4d7bb}
+body[data-experiment=owl] .scene-tools button{color:#a9683c}
+#owl-error{position:absolute;left:10%;top:50%;max-width:350px}
+@media(max-width:800px){
+.experiment-tabs{top:16px;left:auto;right:5%;transform:none}.experiment-tabs button{padding:8px 11px}.experiment-tabs button span{font-size:10px}.experiment-tabs button{font-size:8px;gap:6px}
+.intro{top:77px}.scene-label{top:211px}
+.owl-controls{bottom:72px;display:block;padding:17px 20px}.owl-controls .panel-title{margin-bottom:14px}.owl-controls .control-label,.owl-description{display:none}.owl-material{float:left}.owl-controls .panel-bottom{margin:0 0 0 165px;min-height:37px;line-height:1.7;gap:5px}.owl-controls .panel-bottom button{padding:10px}.owl-reset{margin-top:15px;padding:8px}.owl-controls .panel-title{font-size:12px}
+#owl-canvas{bottom:215px;top:200px}
+#owl-panel .gesture{max-width:60%;font-size:8px}.orbit-icon{font-size:25px}
+}

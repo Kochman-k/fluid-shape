@@ -4,6 +4,8 @@ import { StrokeTrail } from './stroke.js';
 import { StrokeSettling } from './settling.js';
 import { RibbonFlow } from './flow.js';
 import { ParticleCloud } from './particles.js';
+import { OwlExperience } from './owl.js';
+let activeExperiment = 'particles', owl;
 
 const $ = id => document.getElementById(id);
 const container = $('canvas-container');
@@ -78,6 +80,7 @@ function initialize() {
 function resize() {
   if (!renderer) return;
   const { width, height } = container.getBoundingClientRect();
+  if (!width || !height) return;
   renderer.setSize(width, height);
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
@@ -86,7 +89,7 @@ function resize() {
 new ResizeObserver(resize).observe(container);
 
 function onPointer(event) {
-  if (settings.paused || event.target.closest('button, input, aside, dialog, a')) return;
+  if (activeExperiment !== 'particles' || settings.paused || event.target.closest('button, input, aside, dialog, a')) return;
   const rect = container.getBoundingClientRect();
   previousPointer.copy(pointer);
   pointer.set(((event.clientX - rect.left) / rect.width - .5) * 2, -((event.clientY - rect.top) / rect.height - .5) * 2);
@@ -124,7 +127,7 @@ function animate(now) {
   requestAnimationFrame(animate);
   const dt = Math.min((now - (lastFrame || now)) / 1000, .1);
   lastFrame = now;
-  if (settings.paused) return;
+  if (activeExperiment !== 'particles' || settings.paused) return;
   const motionScale = reducedMotion.matches ? .22 : 1;
   elapsed += dt * motionScale;
   const softness = settings.response / 100;
@@ -213,8 +216,15 @@ $('fullscreen').addEventListener('click', async () => {
     else toast('Pełny ekran nie jest dostępny w tej przeglądarce');
   } catch { toast('Pełny ekran nie jest dostępny w tym widoku'); }
 });
-$('about').addEventListener('click', () => $('about-dialog').showModal());
-$('close-dialog').addEventListener('click', () => $('about-dialog').close());
+const particleAbout = $('about-dialog').innerHTML;
+$('about').addEventListener('click', () => {
+  const dialog = $('about-dialog');
+  if (activeExperiment === 'owl') {
+    dialog.innerHTML = '<button id="close-dialog" aria-label="Zamknij">×</button><div class="eyebrow">FLUID / 002</div><h2>Instynkt formy.</h2><p>Polygonowa sowa wyrzeźbiona z warstwowych piór. Lakierowana czerwień, miedziane oczy i studyjne światło tworzą przestrzenną rzeźbę w Twojej przeglądarce.</p><p>Przeciągnij myszą lub palcem, aby obrócić model. Przybliż kółkiem lub dwoma palcami. Możesz też ustawić fokus na scenie i obracać ją strzałkami.</p>';
+  } else dialog.innerHTML = particleAbout;
+  $('close-dialog').onclick = () => dialog.close();
+  dialog.showModal();
+});
 $('about-dialog').addEventListener('click', event => { if (event.target === $('about-dialog')) { const r = event.target.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) event.target.close(); } });
 let toastTimer;
 function toast(message) {
@@ -225,3 +235,42 @@ function toast(message) {
 }
 updateSliders(); updatePause();
 try { initialize(); updateMaterial(); } catch (error) { $('error').hidden = false; console.error('Unable to initialize 3D scene:', error); }
+
+function selectExperiment(name) {
+  activeExperiment = name;
+  document.body.dataset.experiment = name;
+  for (const id of ['particles', 'owl']) {
+    $(`${id}-panel`).hidden = id !== name;
+    $(`tab-${id}`).setAttribute('aria-selected', String(id === name));
+    $(`tab-${id}`).tabIndex = id === name ? 0 : -1;
+  }
+  if (name === 'owl' && !owl) {
+    try { owl = new OwlExperience($('owl-canvas')); }
+    catch (error) { $('owl-error').hidden = false; console.error('Unable to initialize owl:', error); }
+  }
+  owl?.setActive(name === 'owl');
+  if (name === 'particles') resize();
+}
+for (const name of ['particles', 'owl']) {
+  $(`tab-${name}`).addEventListener('click', () => { history.replaceState(null, '', `#${name}`); selectExperiment(name); });
+  $(`tab-${name}`).addEventListener('keydown', event => {
+    if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+      event.preventDefault(); const next = event.key === 'Home' ? 'particles' : event.key === 'End' ? 'owl' : name === 'owl' ? 'particles' : 'owl';
+      $(`tab-${next}`).click(); $(`tab-${next}`).focus();
+    }
+  });
+}
+$('owl-rotate').addEventListener('click', () => {
+  if (!owl) return;
+  owl.autoRotate = !owl.autoRotate;
+  $('owl-rotate').textContent = owl.autoRotate ? 'II' : '▶';
+  $('owl-rotate').setAttribute('aria-pressed', String(owl.autoRotate));
+});
+$('owl-reset').addEventListener('click', () => owl?.reset());
+$('owl-capture').addEventListener('click', () => {
+  if (!owl) return;
+  const link = document.createElement('a');link.download = 'fluid-owl.png';link.href = owl.capture();link.click();
+});
+$('owl-fullscreen').addEventListener('click', () => $('fullscreen').click());
+window.addEventListener('hashchange', () => selectExperiment(location.hash === '#owl' ? 'owl' : 'particles'));
+selectExperiment(location.hash === '#owl' ? 'owl' : 'particles');
