@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import './style.css';
+import { StrokeTrail } from './stroke.js';
 
 const $ = (id) => document.getElementById(id);
 const container = $('canvas-container');
@@ -13,12 +14,19 @@ const palettes = {
 let renderer, scene, camera, sculpture, geometry, material;
 let seed = 1.7, morph = 0, elapsed = 0, lastFrame = 0, lastMove = -10000;
 let pointer = new THREE.Vector2(), previousPointer = new THREE.Vector2();
-const velocity = new THREE.Vector2(), follow = new THREE.Vector2();
+const follow = new THREE.Vector2();
 const followVelocity = new THREE.Vector2();
-const pointerDelta = new THREE.Vector2();
 const followTarget = new THREE.Vector2();
-let lastPointerTime = 0;
-let angle = 0, targetAngle = 0;
+const stroke = new StrokeTrail();
+const radialSegments = 80;
+const longitudinalSegments = 56;
+const ringCount = longitudinalSegments + 1;
+const trailPoints = Array.from({ length: ringCount }, () => new THREE.Vector3());
+const ringCenters = Array.from({ length: ringCount }, () => new THREE.Vector3());
+const ringNormals = Array.from({ length: ringCount }, () => new THREE.Vector2(0, 1));
+const trailCurve = new THREE.CatmullRomCurve3(trailPoints, false, 'centripetal');
+const tangent = new THREE.Vector3();
+const cursorWorld = new THREE.Vector3();
 let base;
 let ready = false;
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -66,11 +74,11 @@ function initialize() {
     attenuationColor: '#e5efff', attenuationDistance: 12,
     side: THREE.DoubleSide,
   });
-  geometry = new THREE.SphereGeometry(1, 80, 56);
+  geometry = new THREE.SphereGeometry(1, radialSegments, longitudinalSegments);
   base = geometry.attributes.position.array.slice();
-  // The complete morph fits this bound; avoid rescanning vertices each frame.
-  geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 3.7);
   sculpture = new THREE.Mesh(geometry, material);
+  // A cursor stroke can span the viewport and cross the original sphere bounds.
+  sculpture.frustumCulled = false;
   scene.add(sculpture);
   const rim = new THREE.DirectionalLight('#e1ddff', .8);
   rim.position.set(3, 4, 5);
@@ -113,37 +121,63 @@ function onPointer(event) {
   const rect = container.getBoundingClientRect();
   previousPointer.copy(pointer);
   pointer.set(((event.clientX - rect.left) / rect.width - .5) * 2, -((event.clientY - rect.top) / rect.height - .5) * 2);
-  const now = performance.now();
-  const sampleTime = THREE.MathUtils.clamp((now - lastPointerTime) / 1000, .008, .1);
-  pointerDelta.subVectors(pointer, previousPointer);
-  if (pointerDelta.length() > .0001) {
-    // Smooth the measured direction, rather than rotating on every mouse event.
-    pointerDelta.divideScalar(sampleTime);
-    velocity.lerp(pointerDelta, 1 - Math.exp(-sampleTime * 12));
+  if (settings.paused) return;
+  if (pointer.distanceToSquared(previousPointer) > .00000001) {
+    const now = performance.now();
+    stroke.add(pointer.x, pointer.y, now);
     lastMove = now;
   }
-  lastPointerTime = now;
 }
 container.addEventListener('pointermove', onPointer);
 container.addEventListener('pointerdown', onPointer);
-container.addEventListener('pointerleave', () => { lastMove = -10000; pointer.set(0, 0); });
+container.addEventListener('pointerleave', () => { lastMove = -10000; });
 
-function deform(time) {
+function updateStroke(now, time) {
+  const halfHeight = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
+  const halfWidth = halfHeight * camera.aspect;
+  const duration = 600 + settings.response * 7;
+  for (let row = 0; row < ringCount; row++) {
+    stroke.sample(now - row / (ringCount - 1) * duration, trailPoints[row]);
+    trailPoints[row].x *= halfWidth;
+    trailPoints[row].y *= halfHeight;
+  }
+  cursorWorld.copy(trailPoints[0]);
+  // Sample the historical path once per cross-section, not once per vertex.
+  for (let row = 0; row < ringCount; row++) {
+    const along = (1 - Math.cos(Math.PI * row / (ringCount - 1))) / 2;
+    trailCurve.getPoint(along, ringCenters[row]);
+    trailCurve.getTangent(along, tangent);
+    if (tangent.lengthSq() > .00001) ringNormals[row].set(-tangent.y, tangent.x).normalize();
+    else if (row > 0) ringNormals[row].copy(ringNormals[row - 1]);
+    const taper = Math.sin(Math.PI * along);
+    // A travelling ripple moves from the brush tip toward the older stroke.
+    const ripple = Math.sin(along * 14 - time * 4 + seed) * .065 * taper;
+    ringCenters[row].x += ringNormals[row].x * ripple;
+    ringCenters[row].y += ringNormals[row].y * ripple;
+    ringCenters[row].z = Math.sin(along * 10 - time * 3) * .09 * taper;
+  }
+}
+
+function deform(time, mobile) {
   const positions = geometry.attributes.position;
   const a = positions.array;
-  const twist = time * .22 + seed;
+  const scale = mobile ? .78 : 1;
   for (let i = 0; i < a.length; i += 3) {
     const x = base[i], y = base[i + 1], z = base[i + 2];
+    const row = Math.floor(i / 3 / (radialSegments + 1));
+    const along = (1 - y) / 2;
     const organic = 1 + .18 * Math.sin(x * 2.4 + y * 2.8 + time * .48 + seed) * Math.cos(z * 2.5 - x * 1.2 - time * .36) + .09 * Math.sin(y * 3.5 - z * 2 + time * .32 + seed);
-    const bx = x * organic * 1.35;
-    const by = y * organic * 1.43;
-    const bz = z * organic * 1.25;
-    const rotation = y * 5.5 + twist;
-    const width = x * .64;
-    const depth = z * .14;
-    const rx = y * 3.1;
-    const ry = Math.sin(y * 3.5 + time * .9 + seed) * .44 + width * Math.cos(rotation) - depth * Math.sin(rotation);
-    const rz = Math.cos(y * 3 + time * .6) * .32 + width * Math.sin(rotation) + depth * Math.cos(rotation);
+    const bx = follow.x + x * organic * 1.35 * scale;
+    const by = follow.y + y * organic * 1.43 * scale;
+    const bz = z * organic * 1.25 * scale;
+    const rotation = along * 7 - time * 1.25 + seed;
+    const width = x * .34 * scale;
+    const depth = z * .055 * scale;
+    const sideways = width * Math.cos(rotation) - depth * Math.sin(rotation);
+    const center = ringCenters[row], normal = ringNormals[row];
+    const rx = center.x + normal.x * sideways;
+    const ry = center.y + normal.y * sideways;
+    const rz = center.z + width * Math.sin(rotation) + depth * Math.cos(rotation);
     a[i] = THREE.MathUtils.lerp(bx, rx, morph);
     a[i + 1] = THREE.MathUtils.lerp(by, ry, morph);
     a[i + 2] = THREE.MathUtils.lerp(bz, rz, morph);
@@ -159,17 +193,27 @@ function animate(now) {
   if (settings.paused) return;
   const motionScale = reducedMotion.matches ? .22 : 1;
   elapsed += dt * motionScale;
-  const idleSeconds = Math.max(0, (now - lastMove) / 1000 - .15);
+  const idleSeconds = Math.max(0, (now - lastMove) / 1000 - .2);
   // Gradually release motion so short gaps between pointer events never snap the shape.
   const activity = Math.exp(-idleSeconds / .5);
   const targetMorph = activity * motionScale;
   const softness = settings.response / 100;
-  morph = THREE.MathUtils.damp(morph, targetMorph, 5 - softness * 3, dt);
+  morph = THREE.MathUtils.damp(morph, targetMorph, 8 - softness * 2.5, dt);
 
-  // An exact critically damped spring preserves momentum through direction changes.
-  // Position returns to the center through the same spring, without multiplying
-  // the rendered position by morph and introducing a second source of movement.
-  followTarget.copy(pointer).multiplyScalar(morph);
+  const mobile = camera.aspect < 1;
+  updateStroke(now, elapsed);
+  const halfHeight = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
+  const halfWidth = halfHeight * camera.aspect;
+  const radius = mobile ? 1.15 : 1.5;
+  const limitX = Math.max(.05, halfWidth - radius);
+  const limitY = Math.max(.05, halfHeight - radius);
+  if (stroke.points.length) {
+    // The resting blob gathers at the end of the stroke, safely inside the view.
+    followTarget.set(
+      THREE.MathUtils.clamp(cursorWorld.x, -limitX, limitX),
+      THREE.MathUtils.clamp(cursorWorld.y, -limitY, limitY)
+    );
+  } else followTarget.set(mobile ? 0 : -.55, mobile ? .45 : -.1);
   const frequency = 10 - softness * 4;
   const decay = Math.exp(-frequency * dt);
   for (const axis of ['x', 'y']) {
@@ -179,25 +223,9 @@ function animate(now) {
     followVelocity[axis] = (followVelocity[axis] - frequency * impulse) * decay;
   }
 
-  if (activity > .6 && velocity.lengthSq() > .0025) {
-    targetAngle = Math.atan2(velocity.y, velocity.x);
-    while (targetAngle - angle > Math.PI / 2) targetAngle -= Math.PI;
-    while (targetAngle - angle < -Math.PI / 2) targetAngle += Math.PI;
-  } else if (morph < .04) {
-    // Keep an equivalent orientation close to zero before the next gesture.
-    angle = THREE.MathUtils.euclideanModulo(angle + Math.PI, Math.PI * 2) - Math.PI;
-    targetAngle = Math.sin(elapsed * .2) * .12;
-  }
-  angle = THREE.MathUtils.damp(angle, targetAngle, 4 - softness * 2.2, dt);
-  deform(elapsed);
-  const mobile = camera.aspect < 1;
-  const originX = mobile ? 0 : -.55;
-  sculpture.position.set(originX + follow.x * (mobile ? .7 : 1.8), (mobile ? .45 : -.1) + follow.y * 1.1, 0);
-  sculpture.scale.setScalar(mobile ? .78 : 1);
-  const yaw = THREE.MathUtils.damp(sculpture.rotation.y, Math.sin(elapsed * .16) * .25 * (1 - morph), 2, dt);
-  sculpture.rotation.set(Math.sin(elapsed * .15) * .12, yaw, angle);
-  sculpture.userData.shadow.position.x = sculpture.position.x;
-  sculpture.userData.shadow.position.y = mobile ? -1.1 : -1.85;
+  deform(elapsed, mobile);
+  sculpture.userData.shadow.position.x = follow.x;
+  sculpture.userData.shadow.position.y = follow.y - (mobile ? 1.45 : 1.75);
   sculpture.userData.shadow.scale.x = 1 + morph * .3;
   renderer.render(scene, camera);
   const state = morph > .35 ? 'W RUCHU' : 'SPOCZYNEK';
@@ -242,7 +270,7 @@ function updatePause() {
 $('pause').addEventListener('click', () => { settings.paused = !settings.paused; updatePause(); });
 $('reset').addEventListener('click', () => {
   Object.assign(settings, defaults);
-  seed = 1.7; pointer.set(0, 0); velocity.set(0, 0); lastMove = -10000; lastPointerTime = 0;
+  seed = 1.7; pointer.set(0, 0); stroke.clear(); lastMove = -10000;
   updateMaterial(); updateSliders(); updatePause(); toast('Przywrócono początkową formę');
 });
 $('shuffle').addEventListener('click', () => { seed = Math.random() * 20; toast('Nowa forma. Nowy rytm.'); });

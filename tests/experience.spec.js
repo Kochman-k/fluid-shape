@@ -19,7 +19,7 @@ test('renders WebGL and morphs from idle to ribbon and back', async ({ page }) =
       step++;
     }, 35);
   });
-  await expect.poll(async () => Number(await canvas.getAttribute('data-morph'))).toBeGreaterThan(.35);
+  await expect.poll(async () => Number(await canvas.getAttribute('data-morph'))).toBeGreaterThan(.8);
   await page.screenshot({ path: '/tmp/fluid-ribbon.png' });
   await page.evaluate(() => clearInterval(window.testMovement));
   await expect.poll(async () => Number(await canvas.getAttribute('data-morph'))).toBeLessThan(.1);
